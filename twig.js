@@ -908,7 +908,7 @@ var Twig = (function (Twig) {
      *        return template;
      *    });
      * });
-     * 
+     *
      * @param {String} method_name The method this loader is intended for (ajax, fs)
      * @param {Function} func The function to execute when loading the template
      * @param {Object|undefined} scope Optional scope parameter to bind func to
@@ -929,7 +929,7 @@ var Twig = (function (Twig) {
 
     /**
      * Remove a registered loader
-     * 
+     *
      * @param {String} method_name The method name for the loader you wish to remove
      *
      * @return {void}
@@ -942,7 +942,7 @@ var Twig = (function (Twig) {
 
     /**
      * See if a loader is registered by its method name
-     * 
+     *
      * @param {String} method_name The name of the loader you are looking for
      *
      * @return {boolean}
@@ -1313,6 +1313,12 @@ var Twig = (function (Twig) {
             new_path = [],
             val;
 
+        if (Array.isArray(template.base) && template.method === 'fs') {
+            return template.base.map(function(a){
+                return a + '/' + file;
+            })
+        }
+
         if (template.url) {
             if (typeof template.base !== 'undefined') {
                 base = template.base + ((template.base.charAt(template.base.length-1) === '/') ? '' : '/');
@@ -1476,12 +1482,28 @@ var Twig = (function (Twig) {
             // TODO: return deferred promise
             return true;
         } else {
-            if (!fs.statSync(location).isFile()) {
+
+            if (Array.isArray(location)) {
+                for (var i = 0; i < location.length; i++) {
+                    try {
+                        if (fs.statSync(location[i]).isFile()) {
+                            data = fs.readFileSync(location[i], 'utf8');
+                            loadTemplateFn(undefined, data);
+                            return template
+                        }
+                    } catch (e) {}
+                }
+
                 throw new Twig.Error('Unable to find template file ' + location);
+            } else {
+                if (!fs.statSync(location).isFile()) {
+                    throw new Twig.Error('Unable to find template file ' + location);
+                }
+                data = fs.readFileSync(location, 'utf8');
+                loadTemplateFn(undefined, data);
+                return template
             }
-            data = fs.readFileSync(location, 'utf8');
-            loadTemplateFn(undefined, data);
-            return template
+
         }
     });
 
@@ -1940,8 +1962,8 @@ var Twig = (function(Twig) {
     Twig.lib.parseISO8601Date = function (s){
         // Taken from http://n8v.enteuxis.org/2010/12/parsing-iso-8601-dates-in-javascript/
         // parenthese matches:
-        // year month day    hours minutes seconds  
-        // dotmilliseconds 
+        // year month day    hours minutes seconds
+        // dotmilliseconds
         // tzstring plusminus hours minutes
         var re = /(\d{4})-(\d\d)-(\d\d)T(\d\d):(\d\d):(\d\d)(\.\d+)?(Z|([+-])(\d\d):(\d\d))/;
 
@@ -1952,7 +1974,7 @@ var Twig = (function(Twig) {
         //  ["2010-12-07T11:00:00.000-09:00", "2010", "12", "07", "11",
         //     "00", "00", ".000", "-09:00", "-", "09", "00"]
         // "2010-12-07T11:00:00.000Z" parses to:
-        //  ["2010-12-07T11:00:00.000Z",      "2010", "12", "07", "11", 
+        //  ["2010-12-07T11:00:00.000Z",      "2010", "12", "07", "11",
         //     "00", "00", ".000", "Z", undefined, undefined, undefined]
 
         if (! d) {
@@ -1972,7 +1994,7 @@ var Twig = (function(Twig) {
         var ms = Date.UTC(d[1], d[2] - 1, d[3], d[4], d[5], d[6]);
 
         // if there are milliseconds, add them
-        if (d[7] > 0) {  
+        if (d[7] > 0) {
             ms += Math.round(d[7] * 1000);
         }
 
@@ -6180,7 +6202,7 @@ var Twig = (function (Twig) {
                 throw new Twig.Error("Both ref and id cannot be set on a twig.js template.");
             }
             return Twig.Templates.load(params.ref);
-        
+
         } else if (params.method !== undefined) {
             if (!Twig.Templates.isRegisteredLoader(params.method)) {
                 throw new Twig.Error('Loader for "' + params.method + '" is not defined.');
@@ -6281,7 +6303,7 @@ var Twig = (function (Twig) {
      * @param {string} path The location of the template file on disk.
      * @param {Object|Function} The options or callback.
      * @param {Function} fn callback.
-     * 
+     *
      * @throws Twig.Error
      */
     Twig.exports.renderFile = function(path, options, fn) {
@@ -6419,4 +6441,3 @@ if (typeof module !== 'undefined' && module.declare) {
     window.twig = Twig.exports.twig;
     window.Twig = Twig.exports;
 }
-
